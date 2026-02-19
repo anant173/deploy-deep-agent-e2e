@@ -1,149 +1,238 @@
-# Content Builder Agent
+# Enterprise Content Agent (Automation Anywhere Demo)
 
-This example has been adapted to be deployed on TrueFoundry from [LangChain Deep Agents GitHub repo](https://github.com/langchain-ai/deepagents/tree/main/examples/content-builder-agent).
+This example is adapted from the [LangChain Deep Agents content builder example](https://github.com/langchain-ai/deepagents/tree/main/examples/content-builder-agent) and modified to demonstrate an **Enterprise AI Copilot** deployed on **TrueFoundry**.
 
-A content writing agent for writing blog posts, LinkedIn posts, and tweets with cover images included.
+It showcases:
 
-**This example demonstrates how to define an agent through three filesystem primitives:**
-- **Memory** (`AGENTS.md`) – persistent context like brand voice and style guidelines
-- **Skills** (`skills/*/SKILL.md`) – workflows for specific tasks, loaded on demand
-- **Subagents** (`subagents.yaml`) – specialized agents for delegated tasks like research
+- Structured enterprise content generation  
+- Research delegation via subagents  
+- File-based persistence  
+- Web search integration  
+- TrueFoundry service deployment  
+- FastAPI backend + Streamlit frontend  
 
-The `content_writer.py` script shows how to combine these into a working agent.
+---
 
-## Quick Start
+# What This Agent Demonstrates
 
-```bash
-# Set API keys
-export TFY_API_KEY="..."    # For all models (text + image)
-export TFY_API_KEY="..."      # For image generation
-export TAVILY_API_KEY="..."      # For web search (optional)
-export MAIN_LLM_MODEL="..."     # For text generation
-export IMAGE_MODEL="..."    # For image generation
+This project is designed for enterprise demos (e.g., Automation Anywhere brown bag sessions, customer workshops).
 
-Or just set the `.env` file as shown in `.env.example`
+It demonstrates:
 
-# Run (uv automatically installs dependencies on first run)
-cd examples/content-builder-agent
-uv run python content_writer.py "Write a blog post about prompt engineering"
-```
+- Executive brief generation  
+- Presales talk tracks  
+- Technical runbooks  
+- AI governance positioning  
+- Web-grounded research  
+- Structured file outputs  
+- Deployment on Kubernetes via TrueFoundry  
 
-**More examples:**
-```bash
-uv run python content_writer.py "Create a LinkedIn post about AI agents"
-uv run python content_writer.py "Write a Twitter thread about the future of coding"
-```
+---
 
-## How It Works
+# Architecture Overview
 
-The agent is configured by files on disk, not code:
+This agent is defined using three filesystem primitives from DeepAgents:
 
-```
-content-builder-agent/
-├── AGENTS.md                    # Brand voice & style guide
-├── subagents.yaml               # Subagent definitions
+| Primitive | File | Purpose |
+|------------|------|----------|
+| Memory | `AGENTS.md` | Defines enterprise AI copilot behavior and tone |
+| Skills | `skills/enterprise-content.md` | Mode-switching structured workflows |
+| Subagents | `subagents.yaml` | Research delegation using web search |
+
+The agent is wired together in `content_agent.py`.
+
+---
+
+# Repository Structure
+
+.
+├── AGENTS.md
 ├── skills/
-│   ├── blog-post/
-│   │   └── SKILL.md             # Blog writing workflow
-│   └── social-media/
-│       └── SKILL.md             # Social media workflow
-└── content_writer.py            # Wires it together (includes tools)
+│ └── enterprise-content.md
+├── subagents.yaml
+├── content_agent.py # FastAPI backend
+├── streamlit_app.py # Streamlit frontend
+├── truefoundry.yaml # Deployment configuration
+└── requirements.txt
+
+---
+
+# How It Works
+
+## 1️⃣ User Submits Request
+
+Via Streamlit UI or API.
+
+Examples:
+- Executive brief  
+- Customer presentation script  
+- Implementation guide  
+- Governance-focused talk track  
+
+---
+
+## 2️⃣ Skill Mode Selection
+
+The `enterprise-content` skill supports:
+
+- Executive Brief  
+- Presales Talk Track  
+- Solution Runbook  
+
+Mode is inferred from user intent.
+
+---
+
+## 3️⃣ Research Delegation (Optional)
+
+If research is required:
+
+- The agent delegates to the `researcher` subagent  
+- `web_search` tool is used  
+- Results are saved under:
+
+research/<slug>/post.md
+
+---
+
+## 4️⃣ Structured Content Generation
+
+The main agent:
+
+- Produces enterprise-ready structured output  
+- Calls `write_file(...)`  
+- Saves output to:
+
+briefs/<slug>/post.md
+talk-tracks/<slug>/post.md
+runbooks/<slug>/post.md
+
+---
+
+## 5️⃣ Optional Image Generation
+
+If required, the agent calls:
+
+generate_enterprise_image(...)
+
+Saved to:
+
+<platform>/<slug>/image.png
+
+---
+
+## 6️⃣ Streamlit Displays Results
+
+The UI:
+
+- Displays assistant output  
+- Fetches generated files from FastAPI `/files`  
+- Renders markdown preview  
+
+---
+
+# Deployment on TrueFoundry
+
+This service is deployed using `truefoundry.yaml`.
+
+### High-Level Deployment Flow
+
+1. GitHub repository is cloned  
+2. Image is built (on TrueFoundry cluster if configured)  
+3. Image pushed to container registry  
+4. Kubernetes Deployment is updated  
+5. Pods are rolled out  
+6. Service endpoint is exposed  
+
+This runs as a Kubernetes workload in your TrueFoundry workspace.
+
+---
+
+# Quick Start (Local)
+
+## 1️⃣ Set Environment Variables
+
+```bash
+export TFY_API_KEY="..."
+export TFY_BASE_URL="..."
+export MAIN_LLM_MODEL="..."
+export IMAGE_MODEL="..."
+export TAVILY_API_KEY="..."   # Optional (for web search)
 ```
 
-| File | Purpose | When Loaded |
-|------|---------|-------------|
-| `AGENTS.md` | Brand voice, tone, writing standards | Always (system prompt) |
-| `subagents.yaml` | Research and other delegated tasks | Always (defines `task` tool) |
-| `skills/*/SKILL.md` | Content-specific workflows | On demand |
+Or use a .env file.
 
-**What's in the skills?** Each skill teaches the agent a specific workflow:
-- **Blog posts:** Structure (hook → context → main content → CTA), SEO best practices, research-first approach
-- **Social media:** Platform-specific formats (LinkedIn character limits, Twitter thread structure), hashtag usage
-- **Image generation:** Detailed prompt engineering guides with examples for different content types (technical posts, announcements, thought leadership)
-
-## Architecture
-
-```python
-agent = create_deep_agent(
-    memory=["./AGENTS.md"],                        # ← Middleware loads into system prompt
-    skills=["./skills/"],                          # ← Middleware loads on demand
-    tools=[generate_cover, generate_social_image], # ← Image generation tools
-    subagents=load_subagents("./subagents.yaml"),  # ← See note below
-    backend=FilesystemBackend(root_dir="./"),
-)
+## 2️⃣ Run FastAPI Backend
+```bash
+uvicorn content_agent:app --reload
 ```
 
-The `memory` and `skills` parameters are handled natively by deepagents middleware. Tools are defined in the script and passed directly.
-
-**Note on subagents:** Unlike `memory` and `skills`, subagents must be defined in code. We use a small `load_subagents()` helper to externalize config to YAML. You can also define them inline:
-
-```python
-subagents=[
-    {
-        "name": "researcher",
-        "description": "Research topics before writing...",
-        "model": "openai-main/gpt-4o",
-        "system_prompt": "You are a research assistant...",
-        "tools": [web_search],
-    }
-],
+## 3️⃣ Run Streamlit UI
+```bash
+streamlit run streamlit_app.py
 ```
 
-**Flow:**
-1. Agent receives task → loads relevant skill (blog-post or social-media)
-2. Delegates research to `researcher` subagent → saves to `research/`
-3. Writes content following skill workflow → saves to `blogs/` or `linkedin/`
-4. Generates cover image with Gemini → saves alongside content
+# Example Prompts
 
-## Output
+- Prepare a 5-minute customer presentation script on how LLMs and Automation Anywhere bots work together.  
+- Draft a structured implementation guide for securely deploying an AI copilot with Automation Anywhere.  
+- Create a customer-facing talk track focused on AI governance and data protection.  
 
-```
-blogs/
-└── prompt-engineering/
-    ├── post.md       # Blog content
-    └── hero.png      # Generated cover image
+---
 
-linkedin/
-└── ai-agents/
-    ├── post.md       # Post content
-    └── image.png     # Generated image
+# Output Structure
 
 research/
-└── prompt-engineering.md   # Research notes
-```
+└── <slug>/
+└── post.md
 
-## Customizing
+briefs/
+└── <slug>/
+└── post.md
 
-**Change the voice:** Edit `AGENTS.md` to modify brand tone and style.
+talk-tracks/
+└── <slug>/
+└── post.md
 
-**Add a content type:** Create `skills/<name>/SKILL.md` with YAML frontmatter:
-```yaml
+runbooks/
+└── <slug>/
+├── post.md
+└── image.png (optional)
+
 ---
-name: newsletter
-description: Use this skill when writing email newsletters
+
+# Security Considerations
+
+- The agent writes files to the configured `OUTPUT_DIR`  
+- Web search may retrieve external content  
+- Structured output can be combined with AI Gateway guardrails  
+- Output validation and redaction should be enforced at the platform layer  
+
 ---
-# Newsletter Skill
-...
-```
 
-**Add a subagent:** Add to `subagents.yaml`:
-```yaml
-editor:
-  description: Review and improve drafted content
-  model: openai-main/gpt-4o
-  system_prompt: |
-    You are an editor. Review the content and suggest improvements...
-  tools: []
-```
+# Requirements
 
-**Add a tool:** Define it in `content_writer.py` with the `@tool` decorator and add to `tools=[]`.
+- Python 3.11+  
+- TrueFoundry API access  
+- `TFY_API_KEY`  
+- `MAIN_LLM_MODEL`  
+- `IMAGE_MODEL`  
+- `TAVILY_API_KEY` (optional for web search)  
 
-## Security Note
+---
 
-This agent has filesystem access and can read, write, and delete files on your machine. Review generated content before publishing and avoid running in directories with sensitive data.
+# Extending the Agent
 
-## Requirements
+## Add a New Skill
 
-- Python 3.11+
-- `TFY_API_KEY` - For the main agent, sub agent (using `gpt-4o`) as well as for image generation (using `gemini-2.5-flash-image`)
-- `TAVILY_API_KEY` - For web search
+Create:
+
+skills/<new-skill>/SKILL.md
+
+## Add a New Subagent
+
+Modify `subagents.yaml`.
+
+## Add a New Tool
+
+Define with `@tool` in `content_agent.py` and add to `tools=[...]`.
