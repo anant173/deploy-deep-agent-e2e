@@ -168,7 +168,7 @@ def _make_llm(model_id: str) -> ChatOpenAI:
             },
             },
             extra_body={
-                "prompt_version_fqn": "chat_prompt:live-demo/aa-brown-bag-demo/simple-prompt:5"
+                "prompt_version_fqn": "chat_prompt:live-demo/agents-demo/simple-agent:1"
             },
         )
 
